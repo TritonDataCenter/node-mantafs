@@ -37,10 +37,18 @@ var fs = mantafs.createClient({
     })
 });
 
-fs.readdir('~~/stor', function (err, files) {
-    assert.ifError(err);
-    console.log(files);
-    fs.close();
+
+fs.once('ready', function () {
+    fs.readdir('~~/stor', function (err, files) {
+        assert.ifError(err);
+
+        console.log(files);
+
+        fs.close(function (err2) {
+            assert.ifError(err2);
+            manta.close();
+        });
+    });
 });
 
 ```
