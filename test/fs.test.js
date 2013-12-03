@@ -88,12 +88,20 @@ after(function (cb) {
 
 
 test('stat: directory', function (t) {
+    var self = this;
     this.fs.stat('~~/stor', function (err, stats) {
         t.ifError(err);
         t.ok(stats);
         t.ok(stats instanceof fs.Stats);
         t.ok(stats.isDirectory());
-        t.end();
+        self.fs.lookup('~~/stor', function (err2, fhandle) {
+            t.ifError(err);
+            t.ok(fhandle);
+            t.equal(typeof (fhandle), 'string');
+            /* JSSTYLED */
+            t.ok(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/.test(fhandle));
+            t.end();
+        });
     });
 });
 
