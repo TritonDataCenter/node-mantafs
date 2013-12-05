@@ -25,8 +25,9 @@ var FS;
 var LOG;
 var MANTA;
 var M_DATA = 'Hello, MantaFS!';
-var M_DIR;
-var M_OBJ;
+var M_DIR = '~~/stor/mantafs.test/' + libuuid.create();
+var M_404 = M_DIR + '/' + libuuid.create();
+var M_OBJ = M_DIR + '/' + libuuid.create();
 var T_DIR = '/tmp/mantafs.test';
 
 
@@ -73,6 +74,9 @@ test('setup', function (t) {
         ttl: parseInt((process.env.FS_CACHE_TTL || 60), 10)
     });
 
+    t.ok(FS);
+    t.ok(FS.toString());
+
     FS.on('error', function (err) {
         t.ifError(err);
         self.log.fatal(err, 'MantaFs: Uncaught Error (no cleanup)');
@@ -80,14 +84,12 @@ test('setup', function (t) {
     });
 
     FS.once('ready', function () {
-        M_DIR = '~~/stor/mantafs.test/' + libuuid.create();
         MANTA.mkdirp(M_DIR, function (err) {
             if (err) {
                 self.log.fatal(err, 'MantaFs: unable to setup');
                 process.exit(1);
             }
 
-            M_OBJ = M_DIR + '/' + libuuid.create();
             var stream = MANTA.createWriteStream(M_OBJ);
             stream.once('close', t.end.bind(t));
             stream.once('error', function (err2) {
@@ -100,7 +102,7 @@ test('setup', function (t) {
 });
 
 
-test('stat: directory', function (t) {
+function _stat_basic_dir(t) {
     FS.stat(M_DIR, function (err, stats) {
         t.ifError(err);
         t.ok(stats);
@@ -115,10 +117,25 @@ test('stat: directory', function (t) {
             t.end();
         });
     });
+}
+
+test('stat: directory', _stat_basic_dir);
+test('stat: directory (cached)', _stat_basic_dir);
+
+
+test('stat: 404', function (t) {
+    FS.stat(M_404, function (err, stats) {
+        t.ok(err);
+        t.ok(err instanceof app.ErrnoError);
+        t.equal(err.code, 'ENOENT');
+        t.notOk(stats);
+        t.end();
+    });
 });
 
 
-test('readdir: directory', function (t) {
+// We want to ensure we exercise all paths of readdir
+function _readdir_basic(t) {
     FS.readdir(M_DIR, function (err, files) {
         t.ifError(err);
         t.ok(files);
@@ -126,12 +143,13 @@ test('readdir: directory', function (t) {
         t.ok(files.length);
         t.end();
     });
-});
+}
+test('readdir: directory', _readdir_basic);
+test('readdir: directory (cached)', _readdir_basic);
 
 
-test('readdir: no entry', function (t) {
-    var dir = M_DIR + '/' + libuuid.create();
-    FS.readdir(dir, function (err, files) {
+test('readdir: 404', function (t) {
+    FS.readdir(M_404, function (err, files) {
         t.ok(err);
         t.ok(err instanceof app.ErrnoError);
         t.equal(err.code, 'ENOENT');
@@ -141,9 +159,19 @@ test('readdir: no entry', function (t) {
 });
 
 
+test('readdir: object', function (t) {
+    FS.readdir(M_OBJ, function (err, files) {
+        t.ok(err);
+        t.ok(err instanceof app.ErrnoError);
+        t.equal(err.code, 'ENOTDIR');
+        t.notOk(files);
+        t.end();
+    });
+});
+
+
 test('open: 404', function (t) {
-    var obj = M_DIR + '/' + libuuid.create();
-    FS.open(obj, 'r', function (err, files) {
+    FS.open(M_404, 'r', function (err, files) {
         t.ok(err);
         t.ok(err instanceof app.ErrnoError);
         t.equal(err.code, 'ENOENT');
@@ -183,7 +211,7 @@ test('open/read/close: ok', function (t) {
 
 
 test('teardown', function (t) {
-    FS.shutdown(function (err) {
+    FS.once('close', function (err) {
         t.ifError(err);
         rimraf(T_DIR, function (err2) {
             t.ifError(err2);
@@ -194,4 +222,6 @@ test('teardown', function (t) {
             });
         });
     });
+
+    FS.shutdown();
 });
