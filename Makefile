@@ -51,7 +51,7 @@ endif
 all: $(SMF_MANIFESTS) | $(NODEUNIT) $(REPO_DEPS)
 	$(NPM) rebuild
 
-$(TAP): | $(NPM_EXEC)
+$(NODEUNIT): | $(NPM_EXEC)
 	$(NPM) install
 
 CLEAN_FILES += ./node_modules ./coverage
@@ -61,7 +61,7 @@ test: $(NODEUNIT)
 	$(NPM) test
 
 .PHONY: cover
-cover: $(ISTANBUL)
+cover: $(NODEUNIT)
 	$(NPM) test --cover
 	$(ISTANBUL) report html
 	$(OPEN) ./coverage/index.html

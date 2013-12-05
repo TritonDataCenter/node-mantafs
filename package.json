@@ -32,7 +32,7 @@
     },
     "devDependencies": {
         "istanbul": "0.1.46",
-        "manta": "1.2.2",
+        "manta": "git://github.com/joyent/node-manta.git#master",
         "rimraf": "2.2.2",
         "nodeunit": "0.8.2",
         "nodeunit-plus": "0.0.1"
