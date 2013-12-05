@@ -21,6 +21,7 @@ require('nodeunit-plus');
 
 ///--- Globals
 
+var FD;
 var FS;
 var LOG;
 var MANTA;
@@ -214,6 +215,18 @@ test('open: without closing', function (t) {
     FS.open(M_OBJ, 'r', function (err, fd) {
         t.ifError(err);
         t.ok(fd);
+        FD = fd;
+        t.end();
+    });
+});
+
+
+test('read: bad fd', function (t) {
+    FS.read(FD + 100, new Buffer(123), 0, 1, function (err, fd) {
+        t.ok(err);
+        t.ok(err instanceof app.ErrnoError);
+        t.equal(err.code, 'EBADF');
+        t.notOk(fd);
         t.end();
     });
 });
