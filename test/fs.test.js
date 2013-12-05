@@ -27,6 +27,8 @@ var LOG;
 var MANTA;
 var M_DATA = 'Hello, MantaFS!';
 var M_DIR = '~~/stor/mantafs.test/' + libuuid.create();
+var M_SUBDIR_1 = M_DIR +'/' + libuuid.create();
+var M_SUBDIR_2 = M_DIR +'/' + libuuid.create();
 var M_404 = M_DIR + '/' + libuuid.create();
 var M_OBJ = M_DIR + '/' + libuuid.create();
 var T_DIR = '/tmp/mantafs.test';
@@ -85,7 +87,7 @@ test('setup', function (t) {
     });
 
     FS.once('ready', function () {
-        MANTA.mkdirp(M_DIR, function (err) {
+        MANTA.mkdirp(M_SUBDIR_2, function (err) {
             if (err) {
                 self.log.fatal(err, 'MantaFs: unable to setup');
                 process.exit(1);
@@ -227,6 +229,43 @@ test('read: bad fd', function (t) {
         t.ok(err instanceof app.ErrnoError);
         t.equal(err.code, 'EBADF');
         t.notOk(fd);
+        t.end();
+    });
+});
+
+
+test('mkdir: ok', function (t) {
+    FS.mkdir(M_SUBDIR_1, function (err) {
+        t.ifError(err);
+        t.end();
+    });
+});
+
+
+test('read new directory: ok', function (t) {
+    FS.readdir(M_SUBDIR_1, function (err, files) {
+        t.ifError(err);
+        t.ok(files);
+        t.notOk(files.length);
+        t.end();
+    });
+});
+
+
+test('mkdir: parent not cached', function (t) {
+    var d = M_SUBDIR_2 + '/' + libuuid.create();
+    FS.mkdir(d, function (err) {
+        t.ifError(err);
+        t.end();
+    });
+});
+
+
+test('close: bogus fd', function (t) {
+    FS.close(-1, function (err) {
+        t.ok(err);
+        t.ok(err instanceof app.ErrnoError);
+        t.equal(err.code, 'EBADF');
         t.end();
     });
 });
