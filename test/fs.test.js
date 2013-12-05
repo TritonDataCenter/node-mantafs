@@ -100,57 +100,57 @@ test('setup', function (t) {
 });
 
 
-// test('stat: directory', function (t) {
-//     FS.stat(M_DIR, function (err, stats) {
-//         t.ifError(err);
-//         t.ok(stats);
-//         t.ok(stats instanceof fs.Stats);
-//         t.ok(stats.isDirectory());
-//         FS.lookup(M_DIR, function (err2, fhandle) {
-//             t.ifError(err);
-//             t.ok(fhandle);
-//             t.equal(typeof (fhandle), 'string');
-//             /* JSSTYLED */
-//             t.ok(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/.test(fhandle));
-//             t.end();
-//         });
-//     });
-// });
+test('stat: directory', function (t) {
+    FS.stat(M_DIR, function (err, stats) {
+        t.ifError(err);
+        t.ok(stats);
+        t.ok(stats instanceof fs.Stats);
+        t.ok(stats.isDirectory());
+        FS.lookup(M_DIR, function (err2, fhandle) {
+            t.ifError(err);
+            t.ok(fhandle);
+            t.equal(typeof (fhandle), 'string');
+            /* JSSTYLED */
+            t.ok(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/.test(fhandle));
+            t.end();
+        });
+    });
+});
 
 
-// test('readdir: directory', function (t) {
-//     FS.readdir(M_DIR, function (err, files) {
-//         t.ifError(err);
-//         t.ok(files);
-//         t.ok(Array.isArray(files));
-//         t.ok(files.length);
-//         t.end();
-//     });
-// });
+test('readdir: directory', function (t) {
+    FS.readdir(M_DIR, function (err, files) {
+        t.ifError(err);
+        t.ok(files);
+        t.ok(Array.isArray(files));
+        t.ok(files.length);
+        t.end();
+    });
+});
 
 
-// test('readdir: no entry', function (t) {
-//     var dir = M_DIR + '/' + libuuid.create();
-//     FS.readdir(dir, function (err, files) {
-//         t.ok(err);
-//         t.ok(err instanceof app.ErrnoError);
-//         t.equal(err.code, 'ENOENT');
-//         t.notOk(files);
-//         t.end();
-//     });
-// });
+test('readdir: no entry', function (t) {
+    var dir = M_DIR + '/' + libuuid.create();
+    FS.readdir(dir, function (err, files) {
+        t.ok(err);
+        t.ok(err instanceof app.ErrnoError);
+        t.equal(err.code, 'ENOENT');
+        t.notOk(files);
+        t.end();
+    });
+});
 
 
-// test('open: 404', function (t) {
-//     var obj = M_DIR + '/' + libuuid.create();
-//     FS.open(obj, 'r', function (err, files) {
-//         t.ok(err);
-//         t.ok(err instanceof app.ErrnoError);
-//         t.equal(err.code, 'ENOENT');
-//         t.notOk(files);
-//         t.end();
-//     });
-// });
+test('open: 404', function (t) {
+    var obj = M_DIR + '/' + libuuid.create();
+    FS.open(obj, 'r', function (err, files) {
+        t.ok(err);
+        t.ok(err instanceof app.ErrnoError);
+        t.equal(err.code, 'ENOENT');
+        t.notOk(files);
+        t.end();
+    });
+});
 
 
 test('open/read/close: ok', function (t) {
