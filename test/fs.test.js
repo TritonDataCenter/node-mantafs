@@ -210,6 +210,15 @@ test('open/read/close: ok', function (t) {
 });
 
 
+test('open: without closing', function (t) {
+    FS.open(M_OBJ, 'r', function (err, fd) {
+        t.ifError(err);
+        t.ok(fd);
+        t.end();
+    });
+});
+
+
 test('teardown', function (t) {
     FS.once('close', function (err) {
         t.ifError(err);

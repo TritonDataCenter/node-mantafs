@@ -17,6 +17,7 @@
 #
 # Tools
 #
+ISTANBUL	:= ./node_modules/.bin/istanbul
 NPM		:= npm
 NODEUNIT	:= ./node_modules/.bin/nodeunit
 
@@ -34,6 +35,16 @@ JSSTYLE_FLAGS	 = -f tools/jsstyle.conf
 include ./tools/mk/Makefile.defs
 
 #
+# Variables
+#
+ifeq ($(shell uname -s),Darwin)
+	OPEN=/usr/bin/open
+else
+	OPEN=/usr/bin/false
+endif
+
+
+#
 # Repo-specific targets
 #
 .PHONY: all
@@ -43,11 +54,17 @@ all: $(SMF_MANIFESTS) | $(NODEUNIT) $(REPO_DEPS)
 $(TAP): | $(NPM_EXEC)
 	$(NPM) install
 
-CLEAN_FILES += ./node_modules
+CLEAN_FILES += ./node_modules ./coverage
 
 .PHONY: test
 test: $(NODEUNIT)
 	$(NPM) test
+
+.PHONY: cover
+cover: $(ISTANBUL)
+	$(NPM) test --cover
+	$(ISTANBUL) report html
+	$(OPEN) ./coverage/index.html
 
 include ./tools/mk/Makefile.deps
 include ./tools/mk/Makefile.targ
