@@ -252,10 +252,31 @@ test('read new directory: ok', function (t) {
 });
 
 
-test('mkdir: parent not cached', function (t) {
+test('mkdir/rmdir: parent not cached', function (t) {
     var d = M_SUBDIR_2 + '/' + libuuid.create();
     FS.mkdir(d, function (err) {
         t.ifError(err);
+        FS.rmdir(d, function (err2) {
+            t.ifError(err2);
+            t.end();
+        });
+    });
+});
+
+
+test('rmdir: ok', function (t) {
+    FS.rmdir(M_SUBDIR_1, function (err) {
+        t.ifError(err);
+        t.end();
+    });
+});
+
+
+test('rmdir: no entry', function (t) {
+    FS.rmdir(M_SUBDIR_1 + '/' + libuuid.create(), function (err) {
+        t.ok(err);
+        t.ok(err instanceof app.ErrnoError);
+        t.equal(err.code, 'ENOENT');
         t.end();
     });
 });
