@@ -282,6 +282,34 @@ test('rmdir: no entry', function (t) {
 });
 
 
+test('rmdir: not dir', function (t) {
+    FS.rmdir(M_OBJ, function (err) {
+        t.ok(err);
+        t.ok(err instanceof app.ErrnoError);
+        t.equal(err.code, 'ENOTDIR');
+        t.end();
+    });
+});
+
+
+test('unlink: object', function (t) {
+    FS.unlink(M_OBJ, function (err) {
+        t.ifError(err);
+        t.end();
+    });
+});
+
+
+test('unlink: ENOENT', function (t) {
+    FS.unlink(M_SUBDIR_1 + '/' + libuuid.create(), function (err) {
+        t.ok(err);
+        t.ok(err instanceof app.ErrnoError);
+        t.equal(err.code, 'ENOENT');
+        t.end();
+    });
+});
+
+
 test('close: bogus fd', function (t) {
     FS.close(-1, function (err) {
         t.ok(err);
