@@ -45,17 +45,14 @@ function rand(max) {
 ///--- Tests
 
 test('setup', function (t) {
-    var self = this;
-
     LOG = bunyan.createLogger({
         name: 'MantaFsTest',
-        stream: process.stdout,
-        level: process.env.LOG_LEVEL || 'warn',
+        stream: (process.env.LOG_LEVEL ?
+                 process.stdout : fs.createWriteStream('/dev/null')),
+        level: process.env.LOG_LEVEL || 'fatal',
         src: true,
         serializers: bunyan.stdSerializers
     });
-
-    var test_dir = T_DIR + '/' + libuuid.create() + '/cache';
 
     MANTA = manta.createClient({
         log: LOG,
@@ -68,11 +65,50 @@ test('setup', function (t) {
         url: process.env.MANTA_URL
     });
 
+    MANTA.mkdirp(M_SUBDIR_2, function (err) {
+        if (err) {
+            console.error('MantaFs: unable to setup: %s', err.stack);
+            process.exit(1);
+        }
+
+        var stream = MANTA.createWriteStream(M_OBJ);
+        stream.once('close', t.end.bind(t));
+        stream.once('error', function (err2) {
+            console.error('MantaFs: unable to setup: %s', err2.stack);
+            process.exit(1);
+        });
+        stream.end(M_DATA);
+    });
+});
+
+
+test('create mantafs bad location', function (t) {
+    var _fs = app.createClient({
+        files: parseInt((process.env.FS_CACHE_FILES || 1000), 10),
+        log: LOG,
+        manta: MANTA,
+        path: '/' + libuuid.create(),
+        sizeMB: parseInt((process.env.FS_CACHE_SIZEMB || 1024), 10),
+        ttl: parseInt((process.env.FS_CACHE_TTL || 60), 10)
+    });
+
+    t.ok(_fs);
+    _fs.once('error', function (err) {
+        t.ok(err);
+        _fs.shutdown(function (err2) {
+            t.ifError(err2);
+            t.end();
+        });
+    });
+});
+
+
+test('create mantafs', function (t) {
     FS = app.createClient({
         files: parseInt((process.env.FS_CACHE_FILES || 1000), 10),
         log: LOG,
         manta: MANTA,
-        path: test_dir,
+        path: T_DIR + '/' + libuuid.create() + '/cache',
         sizeMB: parseInt((process.env.FS_CACHE_SIZEMB || 1024), 10),
         ttl: parseInt((process.env.FS_CACHE_TTL || 60), 10)
     });
@@ -82,26 +118,11 @@ test('setup', function (t) {
 
     FS.on('error', function (err) {
         t.ifError(err);
-        self.log.fatal(err, 'MantaFs: Uncaught Error (no cleanup)');
+        LOG.fatal(err, 'MantaFs: Uncaught Error (no cleanup)');
         process.exit(1);
     });
 
-    FS.once('ready', function () {
-        MANTA.mkdirp(M_SUBDIR_2, function (err) {
-            if (err) {
-                self.log.fatal(err, 'MantaFs: unable to setup');
-                process.exit(1);
-            }
-
-            var stream = MANTA.createWriteStream(M_OBJ);
-            stream.once('close', t.end.bind(t));
-            stream.once('error', function (err2) {
-                self.log.fatal(err2, 'MantaFs: unable to setup');
-                process.exit(1);
-            });
-            stream.end(M_DATA);
-        });
-    });
+    FS.once('ready', t.end.bind(t));
 });
 
 
@@ -223,6 +244,16 @@ test('open: without closing', function (t) {
 });
 
 
+test('close: bogus fd', function (t) {
+    FS.close(-1, function (err) {
+        t.ok(err);
+        t.ok(err instanceof app.ErrnoError);
+        t.equal(err.code, 'EBADF');
+        t.end();
+    });
+});
+
+
 test('read: bad fd', function (t) {
     FS.read(FD + 100, new Buffer(123), 0, 1, function (err, fd) {
         t.ok(err);
@@ -310,12 +341,30 @@ test('unlink: ENOENT', function (t) {
 });
 
 
-test('close: bogus fd', function (t) {
-    FS.close(-1, function (err) {
-        t.ok(err);
-        t.ok(err instanceof app.ErrnoError);
-        t.equal(err.code, 'EBADF');
-        t.end();
+test('reopen', function (t) {
+    FS.shutdown(function (err) {
+        t.ifError(err);
+        FS = app.createClient({
+            files: parseInt((process.env.FS_CACHE_FILES || 1000), 10),
+            log: LOG,
+            manta: MANTA,
+            path: T_DIR + '/' + libuuid.create() + '/cache',
+            sizeMB: parseInt((process.env.FS_CACHE_SIZEMB || 1024), 10),
+            ttl: parseInt((process.env.FS_CACHE_TTL || 60), 10)
+        });
+
+        FS.once('ready', function () {
+            FS.readdir(M_DIR, function (err2, files) {
+                t.ifError(err2);
+                t.ok(files);
+                t.equal(files.length, 1);
+                FS.stat(M_DIR + '/' + files[0], function (err3, stats) {
+                    t.ifError(err3);
+                    t.ok(stats.isDirectory());
+                    t.end();
+                });
+            });
+        });
     });
 });
 
