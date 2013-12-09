@@ -354,6 +354,48 @@ test('createReadStream', function (t) {
 });
 
 
+test('rename: ok', function (t) {
+    var name = M_SUBDIR_2 + '/' + libuuid.create();
+    FS.rename(M_OBJ, name, function (err) {
+        t.ifError(err);
+        FS.rename(name, M_OBJ, function (err2) {
+            t.ifError(err2);
+            t.end();
+        });
+    });
+});
+
+
+test('rename: directory', function (t) {
+    var name = M_SUBDIR_2 + '/' + libuuid.create();
+    FS.rename(M_SUBDIR_2, name, function (err) {
+        t.ok(err);
+        t.equal(err.code, 'EISDIR');
+        t.end();
+    });
+});
+
+
+test('rename: no parent directory', function (t) {
+    var name = M_SUBDIR_1 + '/' + libuuid.create();
+    FS.rename(M_SUBDIR_2, name, function (err) {
+        t.ok(err);
+        t.equal(err.code, 'ENOENT');
+        t.end();
+    });
+});
+
+
+test('rename: parent not object', function (t) {
+    var name = M_OBJ + '/' + libuuid.create();
+    FS.rename(M_OBJ, name, function (err) {
+        t.ok(err);
+        t.equal(err.code, 'ENOTDIR');
+        t.end();
+    });
+});
+
+
 test('unlink: object', function (t) {
     FS.unlink(M_OBJ, function (err) {
         t.ifError(err);
