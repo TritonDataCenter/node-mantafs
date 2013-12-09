@@ -284,12 +284,17 @@ test('read new directory: ok', function (t) {
 
 
 test('mkdir/rmdir: parent not cached', function (t) {
-    var d = M_SUBDIR_2 + '/' + libuuid.create();
+    var n = libuuid.create();
+    var d = M_SUBDIR_2 + '/' + n;
     FS.mkdir(d, function (err) {
         t.ifError(err);
         FS.rmdir(d, function (err2) {
             t.ifError(err2);
-            t.end();
+            FS.readdir(M_SUBDIR_2, function (err3, files) {
+                t.ifError(err3);
+                t.equal(files.indexOf(n), -1);
+                t.end();
+            });
         });
     });
 });
