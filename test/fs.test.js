@@ -323,6 +323,37 @@ test('rmdir: not dir', function (t) {
 });
 
 
+test('createReadStream', function (t) {
+    var opened = false;
+    var rstream = FS.createReadStream(M_OBJ);
+    var str = '';
+
+    t.ok(rstream);
+    rstream.setEncoding('utf8');
+
+    rstream.once('error', function (err) {
+        t.ifError(err);
+        t.end();
+    });
+
+    rstream.on('data', function (chunk) {
+        t.ok(chunk);
+        str += chunk;
+    });
+
+    rstream.once('end', function () {
+        t.equal(str, M_DATA);
+        t.ok(opened);
+        t.end();
+    });
+
+    rstream.once('open', function (fd) {
+        t.ok(fd);
+        opened = true;
+    });
+});
+
+
 test('unlink: object', function (t) {
     FS.unlink(M_OBJ, function (err) {
         t.ifError(err);
