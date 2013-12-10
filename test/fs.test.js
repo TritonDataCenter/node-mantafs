@@ -27,10 +27,10 @@ var LOG;
 var MANTA;
 var M_DATA = 'Hello, MantaFS!';
 var M_DIR = '~~/stor/mantafs.test/' + libuuid.create();
-var M_SUBDIR_1 = M_DIR +'/' + libuuid.create();
-var M_SUBDIR_2 = M_DIR +'/' + libuuid.create();
+var M_SUBDIR_1 = M_DIR +'/subdir';
+var M_SUBDIR_2 = M_DIR +'/subdir 2';
 var M_404 = M_DIR + '/' + libuuid.create();
-var M_OBJ = M_DIR + '/' + libuuid.create();
+var M_OBJ = M_DIR + '/object';
 var T_DIR = '/tmp/mantafs.test/' + libuuid.create();
 
 
@@ -426,24 +426,6 @@ test('rename: parent not object', function (t) {
 });
 
 
-test('unlink: object', function (t) {
-    FS.unlink(M_OBJ, function (err) {
-        t.ifError(err);
-        t.end();
-    });
-});
-
-
-test('unlink: ENOENT', function (t) {
-    FS.unlink(M_SUBDIR_1 + '/' + libuuid.create(), function (err) {
-        t.ok(err);
-        t.ok(err instanceof app.ErrnoError);
-        t.equal(err.code, 'ENOENT');
-        t.end();
-    });
-});
-
-
 test('reopen', function (t) {
     FS.shutdown(function (err) {
         t.ifError(err);
@@ -460,14 +442,44 @@ test('reopen', function (t) {
             FS.readdir(M_DIR, function (err2, files) {
                 t.ifError(err2);
                 t.ok(files);
-                t.equal(files.length, 1);
-                FS.stat(M_DIR + '/' + files[0], function (err3, stats) {
-                    t.ifError(err3);
-                    t.ok(stats.isDirectory());
+                t.equal(files.length, 2);
+
+                var rs = FS.createReadStream(M_OBJ);
+                var str = '';
+                rs.setEncoding('utf8');
+                rs.once('error', function (err4) {
+                    t.ifError(err4);
+                    t.end();
+                });
+
+                rs.on('data', function (chunk) {
+                    str += chunk;
+                });
+
+                rs.once('end', function () {
+                    t.equal(str, M_DATA);
                     t.end();
                 });
             });
         });
+    });
+});
+
+
+test('unlink: object', function (t) {
+    FS.unlink(M_OBJ, function (err) {
+        t.ifError(err);
+        t.end();
+    });
+});
+
+
+test('unlink: ENOENT', function (t) {
+    FS.unlink(M_SUBDIR_1 + '/' + libuuid.create(), function (err) {
+        t.ok(err);
+        t.ok(err instanceof app.ErrnoError);
+        t.equal(err.code, 'ENOENT');
+        t.end();
     });
 });
 
