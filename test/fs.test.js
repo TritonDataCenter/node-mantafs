@@ -103,6 +103,31 @@ test('create mantafs bad location', function (t) {
 });
 
 
+test('create mantafs infinite space', function (t) {
+    var _fs = app.createClient({
+        files: parseInt((process.env.FS_CACHE_FILES || 1000), 10),
+        log: LOG,
+        manta: MANTA,
+        path: T_DIR + '/' + libuuid.create(),
+        sizeMB: (Math.pow(2, 53) - 1),
+        ttl: parseInt((process.env.FS_CACHE_TTL || 60), 10)
+    });
+
+    t.ok(_fs);
+
+    _fs.once('error', function (err) {
+        t.ifError(err)
+        t.end();
+    });
+    _fs.once('ready', function () {
+        _fs.shutdown(function (err) {
+            t.ifError(err);
+            t.end();
+        });
+    });
+});
+
+
 test('create mantafs', function (t) {
     FS = app.createClient({
         files: parseInt((process.env.FS_CACHE_FILES || 1000), 10),
