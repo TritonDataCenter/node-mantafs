@@ -31,7 +31,7 @@ var M_SUBDIR_1 = M_DIR +'/' + libuuid.create();
 var M_SUBDIR_2 = M_DIR +'/' + libuuid.create();
 var M_404 = M_DIR + '/' + libuuid.create();
 var M_OBJ = M_DIR + '/' + libuuid.create();
-var T_DIR = '/tmp/mantafs.test';
+var T_DIR = '/tmp/mantafs.test/' + libuuid.create();
 
 
 ///--- Helpers
@@ -133,7 +133,7 @@ test('create mantafs', function (t) {
         files: parseInt((process.env.FS_CACHE_FILES || 1000), 10),
         log: LOG,
         manta: MANTA,
-        path: T_DIR + '/' + libuuid.create() + '/cache',
+        path: T_DIR + '/cache',
         sizeMB: parseInt((process.env.FS_CACHE_SIZEMB || 1024), 10),
         ttl: parseInt((process.env.FS_CACHE_TTL || 60), 10)
     });
@@ -451,7 +451,7 @@ test('reopen', function (t) {
             files: parseInt((process.env.FS_CACHE_FILES || 1000), 10),
             log: LOG,
             manta: MANTA,
-            path: T_DIR + '/' + libuuid.create() + '/cache',
+            path: T_DIR + '/cache',
             sizeMB: parseInt((process.env.FS_CACHE_SIZEMB || 1024), 10),
             ttl: parseInt((process.env.FS_CACHE_TTL || 60), 10)
         });
