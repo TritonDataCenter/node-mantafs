@@ -116,7 +116,7 @@ test('create mantafs infinite space', function (t) {
     t.ok(_fs);
 
     _fs.once('error', function (err) {
-        t.ifError(err)
+        t.ifError(err);
         t.end();
     });
     _fs.once('ready', function () {
