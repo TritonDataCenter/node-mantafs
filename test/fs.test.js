@@ -466,6 +466,27 @@ test('reopen', function (t) {
 });
 
 
+test('write: r+', function (t) {
+    FS.open(M_OBJ, 'r+', function (o_err, fd) {
+        t.ifError(o_err);
+        t.ok(fd);
+        if (o_err || !fd) {
+            t.end();
+            return;
+        }
+
+        var b = new Buffer('foo');
+        FS.write(fd, b, 0, b.length, 1, function (err, written, buf) {
+            t.ifError(err);
+            t.ok(written);
+            t.equal(written, b.length);
+            t.equal(b.toString(), buf.toString());
+            t.end();
+        });
+    });
+});
+
+
 test('unlink: object', function (t) {
     FS.unlink(M_OBJ, function (err) {
         t.ifError(err);
