@@ -570,6 +570,32 @@ test('unlink: ENOENT', function (t) {
 });
 
 
+test('write: create file', function (t) {
+    FS.open(M_OBJ, 'w', function (o_err, fd) {
+        t.ifError(o_err);
+        t.ok(fd);
+        if (o_err || !fd) {
+            t.end();
+            return;
+        }
+
+        var b = new Buffer('foo');
+        FS.write(fd, b, 0, b.length, 1, function (w_err, written, buf) {
+            t.ifError(w_err);
+            t.ok(written);
+            t.equal(written, b.length);
+            t.equal(b.toString(), (buf || '').toString());
+            FS.stat(M_OBJ, function (err, stats) {
+                t.ifError(err);
+                t.ok(stats);
+                stats = stats || {};
+                t.equal(stats.size, b.length);
+                t.end();
+            });
+        });
+    });
+});
+
 test('teardown', function (t) {
     FS.once('close', function (err) {
         t.ifError(err);
