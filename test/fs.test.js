@@ -590,9 +590,43 @@ test('write: create file', function (t) {
                 t.ok(stats);
                 stats = stats || {};
                 t.equal(stats.size, b.length);
-                t.end();
+                FS.close(fd, function (err2) {
+                    t.ifError(err2);
+                    t.end();
+                });
             });
         });
+    });
+});
+
+
+test('createWriteStream', function (t) {
+    var wstream = FS.createWriteStream(M_OBJ);
+
+    t.ok(wstream);
+
+    wstream.once('error', function (err) {
+        t.ifError(err);
+        t.end();
+    });
+
+    wstream.once('close', function () {
+        var str = '';
+        var rstream = FS.createReadStream(M_OBJ);
+        rstream.setEncoding('utf8');
+        rstream.on('data', function (chunk) {
+            str += chunk;
+        });
+        rstream.once('end', function () {
+            t.equal(str, M_DATA);
+            t.end();
+        });
+    });
+
+    wstream.once('open', function (fd) {
+        t.ok(fd);
+        wstream.write(M_DATA, 'utf8');
+        wstream.end();
     });
 });
 
