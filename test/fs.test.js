@@ -580,7 +580,7 @@ test('write: create file', function (t) {
         }
 
         var b = new Buffer('foo');
-        FS.write(fd, b, 0, b.length, 1, function (w_err, written, buf) {
+        FS.write(fd, b, 0, b.length, null, function (w_err, written, buf) {
             t.ifError(w_err);
             t.ok(written);
             t.equal(written, b.length);
