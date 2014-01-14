@@ -1,4 +1,4 @@
-// Copyright 2013 Joyent, Inc.  All rights reserved.
+// Copyright 2014 Joyent, Inc.  All rights reserved.
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -8,14 +8,15 @@ var crypto = require('crypto');
 var fs = require('fs');
 
 var bunyan = require('bunyan');
-var libuuid = require('libuuid');
 var manta = require('manta');
 var mkdirp = require('mkdirp');
 var rimraf = require('rimraf');
+var uuid = require('node-uuid');
+
+var test = require('tap').test;
 
 var app = require('../lib');
 
-require('nodeunit-plus');
 
 
 
@@ -26,12 +27,12 @@ var FS;
 var LOG;
 var MANTA;
 var M_DATA = 'Hello, MantaFS!';
-var M_DIR = '~~/stor/mantafs.test/' + libuuid.create();
+var M_DIR = '~~/stor/mantafs.test/' + uuid.v4();
 var M_SUBDIR_1 = M_DIR +'/subdir';
 var M_SUBDIR_2 = M_DIR +'/subdir 2';
-var M_404 = M_DIR + '/' + libuuid.create();
+var M_404 = M_DIR + '/' + uuid.v4();
 var M_OBJ = M_DIR + '/object';
-var T_DIR = '/tmp/mantafs.test/' + libuuid.create();
+var T_DIR = '/tmp/mantafs.test/' + uuid.v4();
 
 
 ///--- Helpers
@@ -84,12 +85,9 @@ test('setup', function (t) {
 
 test('create mantafs bad location', function (t) {
     var _fs = app.createClient({
-        files: parseInt((process.env.FS_CACHE_FILES || 1000), 10),
         log: LOG,
         manta: MANTA,
-        path: '/' + libuuid.create(),
-        sizeMB: parseInt((process.env.FS_CACHE_SIZEMB || 1024), 10),
-        ttl: parseInt((process.env.FS_CACHE_TTL || 60), 10)
+        path: '/' + uuid.v4()
     });
 
     t.ok(_fs);
@@ -105,12 +103,9 @@ test('create mantafs bad location', function (t) {
 
 test('create mantafs infinite space', function (t) {
     var _fs = app.createClient({
-        files: parseInt((process.env.FS_CACHE_FILES || 1000), 10),
         log: LOG,
         manta: MANTA,
-        path: T_DIR + '/' + libuuid.create(),
-        sizeMB: (Math.pow(2, 53) - 1),
-        ttl: parseInt((process.env.FS_CACHE_TTL || 60), 10)
+        path: T_DIR + '/' + uuid.v4()
     });
 
     t.ok(_fs);
@@ -130,7 +125,6 @@ test('create mantafs infinite space', function (t) {
 
 test('create mantafs', function (t) {
     FS = app.createClient({
-        files: parseInt((process.env.FS_CACHE_FILES || 1000), 10),
         log: LOG,
         manta: MANTA,
         path: T_DIR + '/cache',
@@ -161,8 +155,6 @@ function _stat_basic_dir(t) {
             t.ifError(err);
             t.ok(fhandle);
             t.equal(typeof (fhandle), 'string');
-            /* JSSTYLED */
-            t.ok(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/.test(fhandle));
             t.end();
         });
     });
@@ -175,12 +167,13 @@ test('stat: directory (cached)', _stat_basic_dir);
 test('stat: 404', function (t) {
     FS.stat(M_404, function (err, stats) {
         t.ok(err);
-        t.ok(err instanceof app.ErrnoError);
         t.equal(err.code, 'ENOENT');
+        t.equal(err.syscall, 'stat');
         t.notOk(stats);
         t.end();
     });
 });
+
 
 
 // We want to ensure we exercise all paths of readdir
@@ -200,7 +193,6 @@ test('readdir: directory (cached)', _readdir_basic);
 test('readdir: 404', function (t) {
     FS.readdir(M_404, function (err, files) {
         t.ok(err);
-        t.ok(err instanceof app.ErrnoError);
         t.equal(err.code, 'ENOENT');
         t.notOk(files);
         t.end();
@@ -211,7 +203,6 @@ test('readdir: 404', function (t) {
 test('readdir: object', function (t) {
     FS.readdir(M_OBJ, function (err, files) {
         t.ok(err);
-        t.ok(err instanceof app.ErrnoError);
         t.equal(err.code, 'ENOTDIR');
         t.notOk(files);
         t.end();
@@ -222,7 +213,6 @@ test('readdir: object', function (t) {
 test('open: 404', function (t) {
     FS.open(M_404, 'r', function (err, files) {
         t.ok(err);
-        t.ok(err instanceof app.ErrnoError);
         t.equal(err.code, 'ENOENT');
         t.notOk(files);
         t.end();
@@ -230,17 +220,29 @@ test('open: 404', function (t) {
 });
 
 
+
 test('open/read/close: ok', function (t) {
     FS.open(M_OBJ, 'r', function (o_err, fd) {
         t.ifError(o_err);
+        if (o_err) {
+            t.end();
+            return;
+        }
+
         t.ok(fd);
 
         var sz = Buffer.byteLength(M_DATA);
         var b = new Buffer(sz);
+        b.fill(0);
         var len = Math.floor(sz / 3);
 
         FS.read(fd, b, 0, len, function one(r_err, nbytes) {
             t.ifError(r_err);
+            if (r_err) {
+                t.end();
+                return;
+            }
+
             t.equal(nbytes, len);
 
             // Here we test the second read going to EOF
@@ -272,7 +274,6 @@ test('open: without closing', function (t) {
 test('close: bogus fd', function (t) {
     FS.close(-1, function (err) {
         t.ok(err);
-        t.ok(err instanceof app.ErrnoError);
         t.equal(err.code, 'EBADF');
         t.end();
     });
@@ -282,7 +283,6 @@ test('close: bogus fd', function (t) {
 test('read: bad fd', function (t) {
     FS.read(FD + 100, new Buffer(123), 0, 1, function (err, fd) {
         t.ok(err);
-        t.ok(err instanceof app.ErrnoError);
         t.equal(err.code, 'EBADF');
         t.notOk(fd);
         t.end();
@@ -309,7 +309,7 @@ test('read new directory: ok', function (t) {
 
 
 test('mkdir/rmdir: parent not cached', function (t) {
-    var n = libuuid.create();
+    var n = 'i_should_not_exist_yet';
     var d = M_SUBDIR_2 + '/' + n;
     FS.mkdir(d, function (err) {
         t.ifError(err);
@@ -317,7 +317,7 @@ test('mkdir/rmdir: parent not cached', function (t) {
             t.ifError(err2);
             FS.readdir(M_SUBDIR_2, function (err3, files) {
                 t.ifError(err3);
-                t.equal(files.indexOf(n), -1);
+                t.equal((files || []).indexOf(n), -1);
                 t.end();
             });
         });
@@ -334,9 +334,8 @@ test('rmdir: ok', function (t) {
 
 
 test('rmdir: no entry', function (t) {
-    FS.rmdir(M_SUBDIR_1 + '/' + libuuid.create(), function (err) {
+    FS.rmdir(M_SUBDIR_1 + '/' + uuid.v4(), function (err) {
         t.ok(err);
-        t.ok(err instanceof app.ErrnoError);
         t.equal(err.code, 'ENOENT');
         t.end();
     });
@@ -346,13 +345,30 @@ test('rmdir: no entry', function (t) {
 test('rmdir: not dir', function (t) {
     FS.rmdir(M_OBJ, function (err) {
         t.ok(err);
-        t.ok(err instanceof app.ErrnoError);
         t.equal(err.code, 'ENOTDIR');
         t.end();
     });
 });
 
 
+test('unlink: object', function (t) {
+    FS.unlink(M_OBJ, function (err) {
+        t.ifError(err);
+        t.end();
+    });
+});
+
+
+test('unlink: ENOENT', function (t) {
+    FS.unlink(M_SUBDIR_1 + '/' + uuid.v4(), function (err) {
+        t.ok(err);
+        t.equal(err.code, 'ENOENT');
+        t.end();
+    });
+});
+
+
+/*
 test('createReadStream', function (t) {
     var opened = false;
     var rstream = FS.createReadStream(M_OBJ);
@@ -422,46 +438,6 @@ test('rename: parent not object', function (t) {
         t.ok(err);
         t.equal(err.code, 'ENOTDIR');
         t.end();
-    });
-});
-
-
-test('reopen', function (t) {
-    FS.shutdown(function (err) {
-        t.ifError(err);
-        FS = app.createClient({
-            files: parseInt((process.env.FS_CACHE_FILES || 1000), 10),
-            log: LOG,
-            manta: MANTA,
-            path: T_DIR + '/cache',
-            sizeMB: parseInt((process.env.FS_CACHE_SIZEMB || 1024), 10),
-            ttl: parseInt((process.env.FS_CACHE_TTL || 60), 10)
-        });
-
-        FS.once('ready', function () {
-            FS.readdir(M_DIR, function (err2, files) {
-                t.ifError(err2);
-                t.ok(files);
-                t.equal(files.length, 2);
-
-                var rs = FS.createReadStream(M_OBJ);
-                var str = '';
-                rs.setEncoding('utf8');
-                rs.once('error', function (err4) {
-                    t.ifError(err4);
-                    t.end();
-                });
-
-                rs.on('data', function (chunk) {
-                    str += chunk;
-                });
-
-                rs.once('end', function () {
-                    t.equal(str, M_DATA);
-                    t.end();
-                });
-            });
-        });
     });
 });
 
@@ -552,22 +528,6 @@ test('ftruncate: EBADF', function (t) {
 });
 
 
-test('unlink: object', function (t) {
-    FS.unlink(M_OBJ, function (err) {
-        t.ifError(err);
-        t.end();
-    });
-});
-
-
-test('unlink: ENOENT', function (t) {
-    FS.unlink(M_SUBDIR_1 + '/' + libuuid.create(), function (err) {
-        t.ok(err);
-        t.ok(err instanceof app.ErrnoError);
-        t.equal(err.code, 'ENOENT');
-        t.end();
-    });
-});
 
 
 test('write: create file', function (t) {
@@ -631,18 +591,57 @@ test('createWriteStream', function (t) {
 });
 
 
-test('teardown', function (t) {
-    FS.once('close', function (err) {
+test('reopen', function (t) {
+    FS.shutdown(function (err) {
         t.ifError(err);
-        rimraf(T_DIR, function (err2) {
-            t.ifError(err2);
-            MANTA.rmr(M_DIR, function (err3) {
-                t.ifError(err3);
-                MANTA.close();
-                t.end();
+        FS = app.createClient({
+            files: parseInt((process.env.FS_CACHE_FILES || 1000), 10),
+            log: LOG,
+            manta: MANTA,
+            path: T_DIR + '/cache',
+            sizeMB: parseInt((process.env.FS_CACHE_SIZEMB || 1024), 10),
+            ttl: parseInt((process.env.FS_CACHE_TTL || 60), 10)
+        });
+
+        FS.once('ready', function () {
+            FS.readdir(M_DIR, function (err2, files) {
+                t.ifError(err2);
+                t.ok(files);
+                t.equal(files.length, 2);
+
+                var rs = FS.createReadStream(M_OBJ);
+                var str = '';
+                rs.setEncoding('utf8');
+                rs.once('error', function (err4) {
+                    t.ifError(err4);
+                    t.end();
+                });
+
+                rs.on('data', function (chunk) {
+                    str += chunk;
+                });
+
+                rs.once('end', function () {
+                    t.equal(str, M_DATA);
+                    t.end();
+                });
             });
         });
     });
+});
+*/
 
-    FS.shutdown();
+test('teardown', function (t) {
+    MANTA.rmr('~~/stor/mantafs.test', function (err) {
+        t.ifError(err);
+        FS.once('close', function (err2) {
+            t.ifError(err2);
+            rimraf(T_DIR, function (err3) {
+                t.ifError(err3);
+                t.end();
+            });
+        });
+        FS.shutdown();
+        MANTA.close();
+    });
 });
