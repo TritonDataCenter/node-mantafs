@@ -368,7 +368,7 @@ test('truncate: ENOENT', function (t) {
     });
 });
 
-/*
+
 test('write: start of file', function (t) {
     FS.open(M_OBJ, 'r+', function (o_err, fd) {
         t.ifError(o_err);
@@ -386,23 +386,6 @@ test('write: start of file', function (t) {
             t.equal(written, b.length);
             t.end();
         });
-    });
-});
-
-
-test('unlink: object', function (t) {
-    FS.unlink(M_OBJ, function (err) {
-        t.ifError(err);
-        t.end();
-    });
-});
-
-
-test('unlink: ENOENT', function (t) {
-    FS.unlink(M_SUBDIR_1 + '/' + uuid.v4(), function (err) {
-        t.ok(err);
-        t.equal(err.code, 'ENOENT');
-        t.end();
     });
 });
 
@@ -428,6 +411,24 @@ test('write: end of file', function (t) {
     });
 });
 
+
+test('unlink: object', function (t) {
+    FS.unlink(M_OBJ, function (err) {
+        t.ifError(err);
+        t.end();
+    });
+});
+
+
+test('unlink: ENOENT', function (t) {
+    FS.unlink(M_SUBDIR_1 + '/' + uuid.v4(), function (err) {
+        t.ok(err);
+        t.equal(err.code, 'ENOENT');
+        t.end();
+    });
+});
+
+/*
 
 test('ftruncate: ok', function (t) {
     FS.open(M_OBJ, 'r+', function (o_err, fd) {
