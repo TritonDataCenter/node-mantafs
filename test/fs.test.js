@@ -351,6 +351,45 @@ test('rmdir: not dir', function (t) {
 });
 
 
+test('truncate: ok', function (t) {
+    FS.truncate(M_OBJ, 0, function (err) {
+        t.ifError(err);
+        t.end();
+    });
+});
+
+
+test('truncate: ENOENT', function (t) {
+    FS.truncate(M_DIR + '/' + uuid.v4(), 0, function (err) {
+        t.ok(err);
+        if (err)
+            t.equal(err.code, 'ENOENT');
+        t.end();
+    });
+});
+
+/*
+test('write: start of file', function (t) {
+    FS.open(M_OBJ, 'r+', function (o_err, fd) {
+        t.ifError(o_err);
+        t.ok(fd);
+        if (o_err || !fd) {
+            t.end();
+            return;
+        }
+
+        var b = new Buffer('foo');
+        FS.write(fd, b, 0, b.length, 1, function (err, written, buf) {
+            t.ifError(err);
+            t.ok(written);
+            t.equal(b.toString(), buf.toString());
+            t.equal(written, b.length);
+            t.end();
+        });
+    });
+});
+
+
 test('unlink: object', function (t) {
     FS.unlink(M_OBJ, function (err) {
         t.ifError(err);
@@ -368,7 +407,86 @@ test('unlink: ENOENT', function (t) {
 });
 
 
-/*
+test('write: end of file', function (t) {
+    FS.open(M_OBJ, 'a', function (o_err, fd) {
+        t.ifError(o_err);
+        t.ok(fd);
+        if (o_err || !fd) {
+            t.end();
+            return;
+        }
+
+        var b = new Buffer('foo');
+        var off = Buffer.byteLength(M_OBJ);
+        FS.write(fd, b, 0, b.length, off, function (err, written, buf) {
+            t.ifError(err);
+            t.ok(written);
+            t.equal(written, b.length);
+            t.equal(b.toString(), buf.toString());
+            t.end();
+        });
+    });
+});
+
+
+test('ftruncate: ok', function (t) {
+    FS.open(M_OBJ, 'r+', function (o_err, fd) {
+        t.ifError(o_err);
+        t.ok(fd);
+        if (o_err || !fd) {
+            t.end();
+            return;
+        }
+
+        FS.ftruncate(fd, 0, function (err) {
+            t.ifError(err);
+            t.end();
+        });
+    });
+});
+
+
+test('ftruncate: EBADF', function (t) {
+    FS.ftruncate(-1, 0, function (err) {
+        t.ok(err);
+        t.equal(err.code, 'EBADF');
+        t.end();
+    });
+});
+
+
+
+
+test('write: create file', function (t) {
+    FS.open(M_OBJ, 'w', function (o_err, fd) {
+        t.ifError(o_err);
+        t.ok(fd);
+        if (o_err || !fd) {
+            t.end();
+            return;
+        }
+
+        var b = new Buffer('foo');
+        FS.write(fd, b, 0, b.length, null, function (w_err, written, buf) {
+            t.ifError(w_err);
+            t.ok(written);
+            t.equal(written, b.length);
+            t.equal(b.toString(), (buf || '').toString());
+            FS.stat(M_OBJ, function (err, stats) {
+                t.ifError(err);
+                t.ok(stats);
+                stats = stats || {};
+                t.equal(stats.size, b.length);
+                FS.close(fd, function (err2) {
+                    t.ifError(err2);
+                    t.end();
+                });
+            });
+        });
+    });
+});
+
+
 test('createReadStream', function (t) {
     var opened = false;
     var rstream = FS.createReadStream(M_OBJ);
@@ -441,123 +559,6 @@ test('rename: parent not object', function (t) {
     });
 });
 
-
-test('write: start of file', function (t) {
-    FS.open(M_OBJ, 'r+', function (o_err, fd) {
-        t.ifError(o_err);
-        t.ok(fd);
-        if (o_err || !fd) {
-            t.end();
-            return;
-        }
-
-        var b = new Buffer('foo');
-        FS.write(fd, b, 0, b.length, 1, function (err, written, buf) {
-            t.ifError(err);
-            t.ok(written);
-            t.equal(written, b.length);
-            t.equal(b.toString(), buf.toString());
-            t.end();
-        });
-    });
-});
-
-
-test('write: end of file', function (t) {
-    FS.open(M_OBJ, 'a', function (o_err, fd) {
-        t.ifError(o_err);
-        t.ok(fd);
-        if (o_err || !fd) {
-            t.end();
-            return;
-        }
-
-        var b = new Buffer('foo');
-        var off = Buffer.byteLength(M_OBJ);
-        FS.write(fd, b, 0, b.length, off, function (err, written, buf) {
-            t.ifError(err);
-            t.ok(written);
-            t.equal(written, b.length);
-            t.equal(b.toString(), buf.toString());
-            t.end();
-        });
-    });
-});
-
-
-test('truncate: ok', function (t) {
-    FS.truncate(M_OBJ, 0, function (err) {
-        t.ifError(err);
-        t.end();
-    });
-});
-
-
-test('truncate: ENOENT', function (t) {
-    FS.truncate(M_DIR + '/' + libuuid.create(), 0, function (err) {
-        t.ok(err);
-        t.equal(err.code, 'ENOENT');
-        t.end();
-    });
-});
-
-
-test('ftruncate: ok', function (t) {
-    FS.open(M_OBJ, 'r+', function (o_err, fd) {
-        t.ifError(o_err);
-        t.ok(fd);
-        if (o_err || !fd) {
-            t.end();
-            return;
-        }
-
-        FS.ftruncate(fd, 0, function (err) {
-            t.ifError(err);
-            t.end();
-        });
-    });
-});
-
-
-test('ftruncate: EBADF', function (t) {
-    FS.ftruncate(-1, 0, function (err) {
-        t.ok(err);
-        t.equal(err.code, 'EBADF');
-        t.end();
-    });
-});
-
-
-
-
-test('write: create file', function (t) {
-    FS.open(M_OBJ, 'w', function (o_err, fd) {
-        t.ifError(o_err);
-        t.ok(fd);
-        if (o_err || !fd) {
-            t.end();
-            return;
-        }
-
-        var b = new Buffer('foo');
-        FS.write(fd, b, 0, b.length, null, function (w_err, written, buf) {
-            t.ifError(w_err);
-            t.ok(written);
-            t.equal(written, b.length);
-            t.equal(b.toString(), (buf || '').toString());
-            FS.stat(M_OBJ, function (err, stats) {
-                t.ifError(err);
-                t.ok(stats);
-                stats = stats || {};
-                t.equal(stats.size, b.length);
-                FS.close(fd, function (err2) {
-                    t.ifError(err2);
-                    t.end();
-                });
-            });
-        });
-    });
-});
 
 
 test('createWriteStream', function (t) {
