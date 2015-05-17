@@ -1,8 +1,8 @@
 # mantafs
 
 `mantafs` provides an API for interacting with
-[Joyent Manta](http://www.joyent.com/products/manta)that is drop-in compatible
-with node's [fs](http://nodejs.org/api/fs.html) API.  This API automatically
+[Joyent Manta](http://www.joyent.com/products/manta) that is drop-in compatible
+with node's [fs](http://nodejs.org/api/fs.html) API. This API automatically
 manages interactions with Manta by maintaining a local on-disk cache; this will
 give you a dramatic performance increase (since in most cases the WAN is
 avoided), at the cost of no longer being consistent at any point in time with
@@ -39,7 +39,7 @@ var fs = mantafs.createClient({
 
 
 fs.once('ready', function () {
-    fs.readdir('~~/stor', function (err, files) {
+    fs.readdir('~/store', function (err, files) {
         assert.ifError(err);
 
         console.log(files);
